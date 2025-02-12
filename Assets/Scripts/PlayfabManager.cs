@@ -10,8 +10,9 @@ public class PlayfabManager : MonoBehaviour
     public TMP_InputField nameInput;
     public TMP_Text displayNameText;
     public TMP_Text playFabIdText;
-
     public TMP_Text killsText;
+    public GameObject rowPrefab;
+    public Transform rowsParent;
 
 
     [Header("Windows")]
@@ -119,30 +120,30 @@ public class PlayfabManager : MonoBehaviour
 
     public void FetchLeaderboard()
     {
-        ExecuteCloudScript("GetTopScores", new Dictionary<string, object> { { "statName", "Kills" }, { "maxResults", 10 } });
+        var args = new Dictionary<string, object> { { "statName", "Kills" }, { "maxResults", 10 } };
+        var request = new ExecuteCloudScriptRequest
+        {
+            FunctionName = "GetTopScores",
+            FunctionParameter = args
+        };
+        PlayFabClientAPI.ExecuteCloudScript(request, OnCloudScriptGetTopSuccess, OnError);
     }
 
-    void OnCloudScriptSuccess(ExecuteCloudScriptResult result)
+    void OnCloudScriptGetTopSuccess(ExecuteCloudScriptResult result)
     {
-        if (result.FunctionName == "GetTopScores")
+        // ExecuteCloudScriptResult
+        // GetLeaderboardResult
+        // var leaderboardDic = result as Dictionary<string, object>;
+        var leaderboardResult = result.FunctionResult as GetLeaderboardResult;
+
+        foreach (var item in leaderboardResult.Leaderboard)
         {
-            // Clear existing entries
-            foreach (Transform child in leaderboardContent)
-                Destroy(child.gameObject);
-
-            // Parse leaderboard data
-            var entries = result.FunctionResult.Data as List<object>;
-            foreach (var entry in entries)
-            {
-                var entryDict = entry as Dictionary<string, object>;
-                var rank = entryDict["Position"] as int?;
-                var name = entryDict["DisplayName"] as string;
-                var score = entryDict["StatValue"] as int?;
-
-                // Create UI entry
-                var entryObj = Instantiate(leaderboardEntryPrefab, leaderboardContent);
-                entryObj.GetComponent<Text>().text = $"{rank}. {name}: {score}";
-            }
+            GameObject newGo = Instantiate(rowPrefab, rowsParent);
+            Text[] texts = newGo.GetComponentsInChildren<Text>();
+            texts[0].text = item.Position.ToString();
+            texts[1].text = item.PlayFabId;
+            texts[2].text = item.StatValue.ToString();
+            Debug.Log(string.Format("PLACE: {0} | ID: {1} | VALUE: {2}", item.Position, item.PlayFabId, item.StatValue));
         }
     }
     void OnError(PlayFabError error)
