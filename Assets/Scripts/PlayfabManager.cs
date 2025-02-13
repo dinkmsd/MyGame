@@ -4,6 +4,8 @@ using PlayFab.ClientModels;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 public class PlayfabManager : MonoBehaviour
 {
@@ -131,21 +133,20 @@ public class PlayfabManager : MonoBehaviour
 
     void OnCloudScriptGetTopSuccess(ExecuteCloudScriptResult result)
     {
-        // ExecuteCloudScriptResult
-        // GetLeaderboardResult
-        // var leaderboardDic = result as Dictionary<string, object>;
-        var leaderboardResult = result.FunctionResult as GetLeaderboardResult;
-
-        foreach (var item in leaderboardResult.Leaderboard)
+        string jsonResult = result.FunctionResult.ToString();
+        JObject resultData = JObject.Parse(jsonResult);
+        JArray leaderboardArray = (JArray)resultData["Leaderboard"];
+        Debug.Log(leaderboardArray);
+        foreach (var item in leaderboardArray)
         {
             GameObject newGo = Instantiate(rowPrefab, rowsParent);
-            Text[] texts = newGo.GetComponentsInChildren<Text>();
-            texts[0].text = item.Position.ToString();
-            texts[1].text = item.PlayFabId;
-            texts[2].text = item.StatValue.ToString();
-            Debug.Log(string.Format("PLACE: {0} | ID: {1} | VALUE: {2}", item.Position, item.PlayFabId, item.StatValue));
+            TMP_Text[] texts = newGo.GetComponentsInChildren<TMP_Text>();
+            texts[0].text = item["Position"].ToString();
+            texts[1].text = item["PlayFabId"].ToString();
+            texts[2].text = item["StatValue"].ToString();
         }
     }
+
     void OnError(PlayFabError error)
     {
         Debug.Log("Error while logging in/creating account!");
